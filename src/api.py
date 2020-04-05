@@ -135,17 +135,23 @@ class API():
         url = BASE + f"{membershipType}/Profile/{membershipId}/Character/{characterId}/?components=205"
         content = self.GET(url)
         if content is None:
-            logger.error('Got None from GET request for Character Inventory: CharacterId (%s), MembershipId (%s), MembershipType (%s)!', characterid, membershipId, memebershipType)
+            logger.error('Got None from GET request for Character Inventory: CharacterId (%s), MembershipId (%s), MembershipType (%s)', characterid, membershipId, memebershipType)
         else:
             logger.info('Got character data for characterid %s for profileid %s', characterid, membershipId)
             logger.debug('Character Inventory Content: %s', content)
 
         return content
 
+    def getProfileInventory(self, membershipType, membershipId):
+        url = BASE + f"{membershipType}/Profile/{membershipId}/?components=205"
+        content = self.GET(url)
+        if content is None:
+            logger.error('Got None from GET request for Profile Inventory: MembershipId (%s), MembershipType (%s)', membershipId, membershipType)
+
 
     #Get Bounties
-    def getProgression(self, memebershipType, membershipId):
-        url = BASE + f"{memebershipType}/Profile/{membershipId}/?components=301"
+    def getProgression(self, membershipType, membershipId):
+        url = BASE + f"{membershipType}/Profile/{membershipId}/?components=301"
         content = self.GET(url)
         if content is None:
             logger.error('Got None in GET request for Profile Progression: MembershipId (%s), MembershipType (%s)', membershipId, memebershipType)
