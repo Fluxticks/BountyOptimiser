@@ -82,13 +82,14 @@ class API():
     def GET(self, url:str):
         try:
             req = self.makeRequest(url)
-            req = Request(url)
             content = urlopen(req).read()
             logger.debug('Made get request: %s and got content of type: %s', req, type(content))
             return contentToDict(content)
         except urllib.error.HTTPError as e:
             logger.error('Encountered an exception while trying to perform GET request: %s', e.reason)
             return None
+        except Exception as ex:
+            logger.error('An unexpected error occured: %s', ex)
 
     #Get Profile
     def getPlayer(self, name:str):
@@ -99,7 +100,7 @@ class API():
         else:
             logger.info('Got player data for %s', name)
             logger.debug('Player Content: %s', content)
-            return content[0]
+            return content
 
 
     def getProfile(self, membershipType, membershipId, components=100):
@@ -143,22 +144,22 @@ class API():
 
 
     #Get Bounties
-    def getProgression(memebershipType, membershipId):
+    def getProgression(self, memebershipType, membershipId):
         url = BASE + f"{memebershipType}/Profile/{membershipId}/?components=301"
-        content = GET(url)
+        content = self.GET(url)
         if content is None:
             logger.error('Got None in GET request for Profile Progression: MembershipId (%s), MembershipType (%s)', membershipId, memebershipType)
         else:
-            logger.info('Got Progression data for membershipid %s ', membershipid)
+            logger.info('Got Progression data for membershipid %s ', membershipId)
             logger.debug('Profile Progression: %s', content)
 
         return content
 
 
     #Update Manifest
-    def manifestUpdate(localization):
+    def manifestUpdate(self, localization):
         url = BASE + "Manifest"
-        content = GET(url)
+        content = self.GET(url)
         if content is None:
             logger.error('Got None in GET request for Manifest data: localization (%s)', localization)
         else:
