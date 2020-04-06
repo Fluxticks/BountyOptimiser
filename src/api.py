@@ -3,40 +3,15 @@ import json
 import os
 import os.path
 import logging
-from coloured_log import ColoredFormatter
 import urllib.error
 import zipfile
-import colorlog
-
-
-LOG_LEVEL = logging.INFO
-LOGFORMAT = '  %(name)s : %(log_color)s%(levelname)-8s%(reset)s | %(message)s (%(filename)s:%(lineno)d)'
-
-stream = colorlog.StreamHandler()
-stream.setFormatter(colorlog.ColoredFormatter(LOGFORMAT))
-
-#LOGFORMAT = '[%(name)s][%(levelname)s]  %(message)s (%(filename)s:%(lineno)d)'
-#LOGFORMAT = '  [%(name)s][%(levelname)-8s] | %(message)s (%(filename)s:%(lineno)d)'
-#formatter = ColoredFormatter(LOGFORMAT)
-
-#stream = logging.StreamHandler()
-#stream.setLevel(LOG_LEVEL)
-#stream.setFormatter(formatter)
-
-file = logging.FileHandler('api.log')
-file.setLevel(logging.INFO)
-file_format = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-file.setFormatter(file_format)
-
-logger = logging.getLogger('API')
-logger.setLevel(LOG_LEVEL)
-logger.addHandler(stream)
-logger.addHandler(file)
+from util import makeLogger, makeColorLog
 
 #----------------------------------------------------------------------------------------------------------------------
 
 BUNGIE = "https://www.bungie.net"
 BASE = BUNGIE + "/Platform/Destiny2/"
+logger = makeColorLog('API')
 
 #----------------------------------------------------------------------------------------------------------------------
 
@@ -83,7 +58,7 @@ class API():
         try:
             req = self.makeRequest(url)
             content = urlopen(req).read()
-            logger.debug('Made get request: %s and got content of type: %s', req, type(content))
+            logger.debug('Made get request: %s and got content of type: %s', url, type(content))
             return contentToDict(content)
         except urllib.error.HTTPError as e:
             logger.error('Encountered an exception while trying to perform GET request: %s', e.reason)
@@ -91,7 +66,7 @@ class API():
         except Exception as ex:
             logger.error('An unexpected error occured: %s', ex)
 
-    #Get Profile
+
     def getPlayer(self, name:str):
         url = BASE + f"SearchDestinyPlayer/-1/{name}/"
         content = self.GET(url)
@@ -116,48 +91,41 @@ class API():
         return content
 
 
-    #Get Character
     def getCharacter(self, membershipType, membershipId, characterId, components=200):
         component = splitComponents(components)
         url = BASE + f"{membershipType}/Profile/{membershipId}/Character/{characterId}/?components={component}"
         content = self.GET(url)
         if content is None:
-            logger.error('Got None from GET request for Profile Character: CharacterId (%s), MembershipId (%s), MembershipType (%s)', characterid, membershipId, memebershipType)
+            logger.error('Got None from GET request for Profile Character: CharacterId (%s), MembershipId (%s), MembershipType (%s)', characterId, membershipId, membershipType)
         else:
-            logger.info('Got character data for characterid %s for profileid %s', characterid, membershipId)
+            logger.info('Got character data for characterid %s for profileid %s', characterId, membershipId)
             logger.debug('Character Content: %s', content)
 
         return content
 
 
-    #Get Character Inventory
+    #Get an individual characters inventory
     def getCharacterInventory(self, membershipType, membershipId, characterId):
         url = BASE + f"{membershipType}/Profile/{membershipId}/Character/{characterId}/?components=205"
         content = self.GET(url)
         if content is None:
-            logger.error('Got None from GET request for Character Inventory: CharacterId (%s), MembershipId (%s), MembershipType (%s)', characterid, membershipId, memebershipType)
+            logger.error('Got None from GET request for Character Inventory: CharacterId (%s), MembershipId (%s), MembershipType (%s)', characterId, membershipId, membershipType)
         else:
-            logger.info('Got character data for characterid %s for profileid %s', characterid, membershipId)
+            logger.info('Got character data for characterid %s for profileid %s', characterId, membershipId)
             logger.debug('Character Inventory Content: %s', content)
 
         return content
 
+
+    #Gets all items including quests and bounties
     def getProfileInventory(self, membershipType, membershipId):
-        url = BASE + f"{membershipType}/Profile/{membershipId}/?components=205"
+        url = BASE + f"{membershipType}/Profile/{membershipId}/?components=102,201"
         content = self.GET(url)
         if content is None:
             logger.error('Got None from GET request for Profile Inventory: MembershipId (%s), MembershipType (%s)', membershipId, membershipType)
-
-
-    #Get Bounties
-    def getProgression(self, membershipType, membershipId):
-        url = BASE + f"{membershipType}/Profile/{membershipId}/?components=301"
-        content = self.GET(url)
-        if content is None:
-            logger.error('Got None in GET request for Profile Progression: MembershipId (%s), MembershipType (%s)', membershipId, memebershipType)
         else:
-            logger.info('Got Progression data for membershipid %s ', membershipId)
-            logger.debug('Profile Progression: %s', content)
+            logger.info('Got profile inventory data for profile id: %s (Type:%s)', membershipId, membershipType)
+            logger.debug('Profile Inventory Content: %s', content)
 
         return content
 
@@ -176,7 +144,7 @@ class API():
             filename = filename.split('.')[0]
             if not os.path.isfile(filename+".sqlite3"):
                 url = BUNGIE + f"/common/destiny2_content/sqlite/{localization}/{filename}.content"
-                req = makeRequest(url)
+                req = self.makeRequest(url)
                 logger.debug('Making request %s', req)
                 with urlopen(req) as dl_file:
                     with open('manifest.zip', 'wb') as out_file:
@@ -184,7 +152,11 @@ class API():
                 with zipfile.ZipFile('manifest.zip', 'r') as zip_ref:
                     zip_ref.extractall('.')
 
+                logger.info('Downloaded new manifest: %s', filename)
+
                 os.remove('manifest.zip')
                 os.rename(filename+".content", filename+".sqlite3")
             else:
-                logger.info('Not downloading manifest as no update')
+                logger.info('Not downloading new manifest, staying on %s', filename)
+
+        return filename + '.sqlite3'
