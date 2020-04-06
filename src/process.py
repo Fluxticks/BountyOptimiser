@@ -15,35 +15,53 @@ class Optimise():
         self._manifestLoc = manifest
 
 
-    def getInventory(self, membershipType, membershipId):
+    def getAllItems(self, membershipType, membershipId):
         response = self._api.getProfileInventory(membershipType, membershipId)
         logger.debug('Got response for GetInventory call: %s', response)
-        
-        items = response.get('profileInventory').get('data').get('items')
 
-        logger.debug('Items retrieved from api call: %s', items)
+        return response
 
-        tracked_enums = [BucketEnum.VAULT, BucketEnum.KINETIC_WEAPONS, BucketEnum.ENERGY_WEAPONS, BucketEnum.POWER_WEAPONS]
+    def getBounties(self, items, characterIds):
+        characterInventories = items.get('characterInventories').get('data')
 
-        for item in items:
-            dehashed = unHashToId(item.get('bucketHash'))
-            if unHashToId not in tracked_enums:
-                items.remove(item)
+        bounties = {}
 
-        logger.debug('Filtered items for vault and weapons: %s', items)
+        for character in characterIds:
+            bounties[character] = []
+            for item in characterInventories.get(character).get('items'):
+                if item.get('bucketHash') == BucketEnum.QUESTS:
+                    item['manifest'] = self.getValueFromTable(unHashToId(item.get('itemHash')), 'DestinyInventoryItemDefinition')
+                    bounties[character].append(item)
+                    logger.debug('Appended hashed item for character %s : %s', character, item.get('itemHash'))
 
+        logger.info('Done finding bounties for all characters (%d)', len(characterIds))
+        logger.debug('Bounty data: %s', bounties)
+        return bounties
+
+    def getWeapons(self, items, characterIds):
+        weaponHashes = [BucketEnum.KINETIC_WEAPONS, BucketEnum.ENERGY_WEAPONS, BucketEnum.POWER_WEAPONS]
+        characterInventories = items.get('characterInventories').get('data')
+        vaultInventory = items.get('profileInventory').get('data').get('items')
+        items = []
+
+        for character in characterIds:
+            for item in characterInventories.get(character).get('items'):
+                if item.get('bucketHash') in weaponHashes:
+                    items.append(item)
+
+        for item in vaultInventory:
+            if item.get('bucketHash') == BucketEnum.VAULT:
+                manifestItem = self.getValueFromTable(unHashToId(item.get('itemHash')), 'DestinyInventoryItemDefinition')
+                if manifestItem.get('inventory').get('bucketTypeHash') in weaponHashes:
+                    item['bucketHash'] = manifestItem.get('inventory').get('bucketTypeHash')
+                    items.append(item)
+                    logger.debug('Appended hased item from vault: %s', item.get('itemHash'))
+
+        logger.info("Done finding weapons for all characters (%d) and Vault", len(characterIds))
+        logger.debug('Weapons data: %s', items)
         return items
 
-    def getBounties(self, membershipType, membershipId, characterIds):
-        response = self._api.getProgression(membershipType, membershipId)
-        characterData = response.get('characterUninstancedItemComponents')
-        objectives = {}
-        for character in characterIds:
-            objectives[character] = characterData.get(character).get('objectives')
         
-        return objectives
-        
-
     def getCharacters(self, membershipType, membershipId):
         response = self._api.getProfile(membershipType, membershipId)
         characters = response.get('profile').get('data').get('characterIds')
@@ -60,14 +78,20 @@ class Optimise():
         return [pType, pId, displayName]
 
     def OptimiseBounties(self, player):
-        self._profile = self.getPlayerData(player)
+        profile = self.getPlayerData(player)
 
-        playerId = self._profile[1]
-        playerType = self._profile[0]
+        playerId = profile[1]
+        playerType = profile[0]
 
-        self._characters = self.getCharacters(playerType, playerId)
+        items = self.getAllItems(playerType, playerId)
 
-        print(self._objectives)
+        characters = self.getCharacters(playerType, playerId)
+
+        bounties = self.getBounties(items, characters)
+        weapons = self.getWeapons(items, characters)
+
+        print(weapons)
+
 
     def getValueFromTable(self, valueId, tableName):
         try:
