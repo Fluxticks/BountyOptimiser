@@ -45,6 +45,14 @@ class ComponentTypeEnum:
     RECORDS = '900'
     TRANSITORY = '1000'
 
+class ItemCategoryEnum:
+    WARLOCK_GEAR = 21
+    TITAN_GEAR = 22
+    HUNTER_GEAR = 23
+
+#######################################################################
+# All Enums must be unhashed in order for the manifest to be searched #
+#######################################################################
 
 class StatsEnum:
     HANDICAP = '2341766298'
@@ -96,12 +104,6 @@ class StatsEnum:
     POWER = '1935470627'
     RECOVERY = '1943323491'
     SOLAR_ENERGY_CAPACITY = '2018193158'
-
-
-class ItemCategoryEnum:
-    WARLOCK_GEAR = 21
-    TITAN_GEAR = 22
-    HUNTER_GEAR = 23
 
 
 class BucketEnum:
