@@ -9,4 +9,4 @@ if __name__ == '__main__':
     manifest = api.manifestUpdate('en')
     logger.info('Manifest is on ver %s', manifest)
     opt = Optimise('731b7c448f4f41fdaaef9d95284d7242', manifest)
-    opt.OptimiseBounties('Fuxticks')
+    opt.performOptimisation('Fuxticks')
