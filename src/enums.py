@@ -108,6 +108,11 @@ class StatsEnum:
     ARC_DAMAGE = '2303181850'
     VOID_DAMAGE = '3454344768'
 
+class CategoryEnum:
+    BOUNTY = '1784235469'
+    DAILY_BOUNTY = '3441456675'
+    WEEKLY_BOUNTY = '579365201'
+    QUEST_STEP = '16'
 
 class BucketEnum:
     ENERGY_WEAPONS = 2465295065

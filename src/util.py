@@ -44,6 +44,51 @@ def makeLogger(logName, logLevel = logging.INFO):
 
 def unHashToId(hashvalue):
     val = int(hashvalue)
-    if (val & (1 << (32 -1))) != 0:
+    if (val & (1 << 31)) != 0:
         val = val - (1 << 32)
     return val
+
+class bcolours:
+    """The ANSI colour codes
+    """
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    ERROR = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+
+def dprint(data, parent='data', level=0):
+    """Prints a dictionary with formatting
+    
+    Args:
+        data (dict): The dictionary to be printed
+        parent (str, optional): The key from the parent for nested dictionaries
+        level (int, optional): How many nested dictionaries in the recursion is
+    """
+    tabs = '\t' * level
+    cprint('{}' + tabs + parent + '{}: ', bcolours.OKBLUE)
+    tabs = '\t' * (level + 1)
+    for key, value in data.items():
+        if isinstance(value, dict):
+            dprint(value, parent=key, level=level + 1)
+        elif isinstance(value, list):
+            cprint('{}' + tabs + key + '{}: {}{}{}', bcolours.ERROR, bcolours.WARNING, value, bcolours.ENDC)
+        elif isinstance(value, int):
+            cprint('{}' + tabs + key + '{}: {}{}{}', bcolours.ERROR, bcolours.OKGREEN, value, bcolours.ENDC)
+        elif isinstance(value, str):
+            cprint('{}' + tabs + key + '{}: {}', bcolours.ERROR, value)
+
+
+def cprint(text, colour, *args):
+    """Prints a message with colour
+    
+    Args:
+        text (str): The text to be coloured
+        colour (bcolours.COLOR): The colour of the text
+        *args: Any extra strings to be printed
+    """
+    print(text.format(colour, bcolours.ENDC, *args))
+    return text.format(colour, bcolours.ENDC, *args) + '\n'
