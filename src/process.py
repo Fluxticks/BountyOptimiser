@@ -23,11 +23,11 @@ class Optimise():
 
     def makeBuckets(self):
         
-        self.weaponBuckets = ['auto rifle', 'scout rifle', 'hand cannon', 'sniper', 'sidearm', 'pulse rifle', 'submachine gun', 'shotgun', 'fusion rifle', 'trace rifle', 'grenade launcher', 'rocket launcher', 'linear fusion rifle', 'sword', 'heavy machine gun', 'ability']
+        self.weaponBuckets = ['auto rifle', 'scout rifle', 'hand cannon', 'sniper', 'sidearm', 'pulse rifle', 'submachine gun', 'shotgun', 'fusion rifle', 'trace rifle', 'grenade launcher', 'rocket launcher', 'linear fusion rifle', 'sword', 'heavy machine gun']
         self.enemyBuckets = ['fallen', 'vex', 'hive', 'taken', 'scorn', 'cabal', 'guardians'] #
         self.enemyWording = ['opponents', 'combatants', 'enemies', 'any target'] #
         self.elementBuckets = ['solar', 'void', 'arc'] #
-        self.slotBuckets = ['kinetic', 'energy', 'power']
+        self.slotBuckets = ['kinetic', 'energy', 'power', 'ability']
         self.killBuckets = ['rapid', 'precision', 'multi'] #
         self.abilityBuckets = ['melee', 'super', 'grenade']
         self.planetBuckets = ['edz', 'titan', 'moon', 'nessus', 'tangled shore', 'dreaming city', 'mercury', ' io', 'mars']
