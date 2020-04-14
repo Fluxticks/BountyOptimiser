@@ -11,7 +11,7 @@ from util import makeLogger, makeColorLog
 
 BUNGIE = "https://www.bungie.net"
 BASE = BUNGIE + "/Platform/Destiny2/"
-logger = makeColorLog('API')
+logger = makeLogger('API', logLevel=logging.INFO)
 
 #----------------------------------------------------------------------------------------------------------------------
 
@@ -58,13 +58,14 @@ class API():
         try:
             req = self.makeRequest(url)
             content = urlopen(req).read()
-            logger.debug('Made get request: %s and got content of type: %s', url, type(content))
+            logger.trace('Content recived from request: %s', content)
             return contentToDict(content)
         except urllib.error.HTTPError as e:
             logger.error('Encountered an exception while trying to perform GET request: %s', e.reason)
             return None
         except Exception as ex:
             logger.error('An unexpected error occured: %s', ex)
+            return None
 
 
     def getPlayer(self, name:str):
@@ -74,7 +75,7 @@ class API():
             logger.error('Got None from GET request for Player: Name (%s)', name)
         else:
             logger.info('Got player data for %s', name)
-            logger.debug('Player Content: %s', content)
+            logger.trace('Player Content: %s', content)
             return content
 
 
@@ -86,7 +87,7 @@ class API():
             logger.error('Got None from GET request for Player Profile: MembershipId (%s), MembershipType (%s)', membershipId, membershipType)
         else:
             logger.info('Got profile data for player id %s on platform id %s', membershipId, membershipType)
-            logger.debug('Profile Content: %s', content)
+            logger.trace('Profile Content: %s', content)
         
         return content
 
@@ -99,7 +100,7 @@ class API():
             logger.error('Got None from GET request for Profile Character: CharacterId (%s), MembershipId (%s), MembershipType (%s)', characterId, membershipId, membershipType)
         else:
             logger.info('Got character data for characterid %s for profileid %s', characterId, membershipId)
-            logger.debug('Character Content: %s', content)
+            logger.trace('Character Content: %s', content)
 
         return content
 
@@ -112,7 +113,7 @@ class API():
             logger.error('Got None from GET request for Character Inventory: CharacterId (%s), MembershipId (%s), MembershipType (%s)', characterId, membershipId, membershipType)
         else:
             logger.info('Got character data for characterid %s for profileid %s', characterId, membershipId)
-            logger.debug('Character Inventory Content: %s', content)
+            logger.trace('Character Inventory Content: %s', content)
 
         return content
 
@@ -125,7 +126,7 @@ class API():
             logger.error('Got None from GET request for Profile Inventory: MembershipId (%s), MembershipType (%s)', membershipId, membershipType)
         else:
             logger.info('Got profile inventory data for profile id: %s (Type:%s)', membershipId, membershipType)
-            logger.debug('Profile Inventory Content: %s', content)
+            logger.trace('Profile Inventory Content: %s', content)
 
         return content
 
