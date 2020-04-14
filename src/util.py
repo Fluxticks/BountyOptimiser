@@ -20,7 +20,7 @@ def makeLogger(logName, logLevel=logging.INFO):
     stream.setFormatter(formatter)
 
     file = logging.FileHandler(logName.lower()+'.log')
-    file.setLevel(logging.INFO)
+    file.setLevel(logging.DEBUG)
     file_format = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     file.setFormatter(file_format)
 
@@ -38,7 +38,7 @@ def makeColorLog(logName, logLevel=logging.INFO):
     stream.setFormatter(colorlog.ColoredFormatter(LOGFORMAT))
 
     file = logging.FileHandler(logName.lower()+'.log')
-    file.setLevel(logging.INFO)
+    file.setLevel(logging.DEBUG)
     file_format = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     file.setFormatter(file_format)
 
