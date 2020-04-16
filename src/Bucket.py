@@ -1,7 +1,9 @@
+from copy import deepcopy
+
 class Bucket():
 
     def __init__(self, bounty, exclusive):
-        self._objectives = []
+        self._objectives = {}
         self._bounties = []
         self.exclusiveObjectives = exclusive
         self.addBounty(bounty)
@@ -13,9 +15,9 @@ class Bucket():
         return self.toString()
 
     def toString(self):
-        output = {}
+        output = []
         for bounty in self.bounties:
-            output[bounty.itemHash] = bounty.objectives
+            output.append(bounty.data)
         return str(output)
 
 
@@ -34,22 +36,48 @@ class Bucket():
 
     def __addObjectives(self, objectives):
 
-        for objective in objectives:
-            if objective not in self._objectives:
-                self._objectives.append(objective)
+        for key,objective in objectives.items():
+            if not self._objectives.get(key):
+                self._objectives[key] = []
+            if objective not in self._objectives.get(key):
+                self._objectives[key].append(objective)
 
     def addBounty(self, bounty):
-        bountyObjectives = bounty.objectives
+        maxTier = bounty.tier
 
-        for tObjective in bountyObjectives:
-            for mObjective in self.objectives:
-                if self.exclusiveObjectives.get(mObjective) is not None:
-                    if tObjective in self.exclusiveObjectives.get(mObjective):
-                        return False
+        for selfBounty in self.bounties:
+            if not self.__doChecks(selfBounty, bounty):
+                return False
 
         self._bounties.append(bounty)
-        self.__addObjectives(bountyObjectives)
+        self.__addObjectives(bounty.objectives)
+
         return True
+       
+
+    def __doChecks(self, currentBounty, bounty):
+
+        copyCurrentBounty = deepcopy(currentBounty)
+        copyBounty = deepcopy(bounty)
+
+        if copyCurrentBounty.tier == copyBounty.tier:
+            tier = copyBounty.tier
+            if not any(x in copyCurrentBounty.get(tier) for x in copyBounty.get(tier)):
+                return False
+        else:
+            if copyCurrentBounty > copyBounty:
+                copyCurrentBounty.remove(copyCurrentBounty.tier)
+            else:
+                copyBounty.remove(copyBounty.tier)
+
+        for key in copyCurrentBounty.keys:
+            if copyBounty.get(key):
+                if not any(x in copyCurrentBounty.get(key) for x in copyBounty.get(key)):
+                    return False
+
+        return True
+
+
 
     def addExclusives(self, exclusiveData):
 
