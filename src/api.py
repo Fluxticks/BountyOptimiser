@@ -11,7 +11,7 @@ from util import makeLogger, makeColorLog
 
 BUNGIE = "https://www.bungie.net"
 BASE = BUNGIE + "/Platform/Destiny2/"
-logger = makeLogger('API', logLevel=logging.INFO)
+logger = makeLogger('API')
 
 #----------------------------------------------------------------------------------------------------------------------
 

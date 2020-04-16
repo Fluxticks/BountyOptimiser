@@ -10,7 +10,7 @@ from itertools import chain
 from Bucket import Bucket
 from Bounty import Bounty
 
-logger = makeLogger('opt', logLevel=logging.DEBUG)
+logger = makeLogger('opt')
 
 class Optimise():
 
@@ -19,12 +19,13 @@ class Optimise():
         self._api = API(token)
         self._manifestLoc = manifest
         logger.debug('Manifest loc: %s', self._manifestLoc)
-        self.makeBuckets()
+        self.generateBuckets()
 
-    def makeBuckets(self):
+    def generateBuckets(self):
         
         #General keywords
-        weapons = ['auto rifle', 'scout rifle', 'hand cannon', 'sniper', 'sidearm', 'pulse rifle', 'submachine gun', 'shotgun', 'fusion rifle', 'trace rifle', 'grenade launcher', 'rocket launcher', 'linear fusion rifle', 'sword', 'heavy machine gun']
+        weapons = ['auto rifle', 'scout rifle', 'hand cannon', 'sniper', 'sidearm', 'pulse rifle', 'submachine gun', 'shotgun', 'fusion rifle', 'grenade launcher', 'trace rifle']
+        heavyWeapons = ['heavy grenade launcher', 'rocket launcher', 'linear fusion rifle', 'sword', 'heavy machine gun']
         combatants = ['fallen', 'vex', 'hive', 'taken', 'scorn', 'cabal', 'guardians'] 
         targets = ['opponents', 'combatants', 'enemies', 'any target'] 
         elements = ['solar', 'void', 'arc'] 
@@ -47,16 +48,20 @@ class Optimise():
         #Location keywords
         location = ['chest', 'patrol', 'public event']
 
-        Tier0 = slots
-        Tier1 = weapons + abilities
-        Tier2 = elements + killType + targets
-        Tier3 = combatants
-        Tier4 = planets + location
-        Tier5 = activities
+        Tier1 = slots
+        Tier2 = weapons + abilities + heavyWeapons
+        Tier3 = elements + killType + targets
+        Tier4 = combatants
+        Tier5 = planets + location
+        Tier6 = activities
 
-        self.Tiers = {0:Tier0,1:Tier1,2:Tier2,3:Tier3,4:Tier4,5:Tier5}
+        # key is 2^(tier-1)
+
+        self.Tiers = {1:Tier1,2:Tier2,4:Tier3,8:Tier4,16:Tier5,32:Tier6}
 
         logger.trace('Tiers created: %s', self.Tiers)
+
+        # do longer words first. ensures that liner fusion is found before fusion for example
 
         #for key,value in self.Tiers.items():
         #    self.Tiers[key] = value.sort(key=lambda x: len(x.split(' ')), reverse=False)
@@ -67,16 +72,12 @@ class Optimise():
         for bucket in exclusiveBuckets:
             self.exclusiveData.update(self.makeExclusive(bucket))
 
-        self.exclusiveData['kinetic'] += elements
+        self.exclusiveData['kinetic'] += elements + heavyWeapons
+        self.exclusiveData['energy'] += heavyWeapons
 
         logger.trace('Exclusive data: %s', self.exclusiveData)
 
         #dprint(exclusiveData)
-
-        #self.keywords = weapons + combatants + targets + elements + slots + killType + abilities + planets + activities  + games + crucible + tasks + gambit + location
-
-        #self.keywords.sort(key=lambda x: len(x.split(' ')), reverse=False)
-
 
     def makeExclusive(self, items):
         data = {}
@@ -100,8 +101,39 @@ class Optimise():
 
         bounties = self.makeBountyFromAPIData(bounties, characters)
 
-        logger.debug('Bounties: %s', bounties)
+        self.makeCharacterBuckets(bounties, characters)
 
+
+    def makeCharacterBuckets(self, bounties, characters):
+
+        buckets = {}
+        for character in characters:
+            logger.info('Making buckets for character id: %s', character)
+            buckets[character] = self.makeBuckets(bounties.get(character))
+
+        logger.debug('Character buckets: %s', buckets)
+        logger.info('Finished making buckets for all characters (%d)', len(characters))
+
+        return buckets
+
+
+    def makeBuckets(self, bounties):
+
+        buckets = []
+        for bounty in bounties:
+            logger.debug('Adding %s bounty to buckets...', bounty)
+            foundValidBucket = False
+            for bucket in buckets:
+                foundValidBucket = bool(bucket.addBounty(bounty)) | foundValidBucket
+
+            if not foundValidBucket:
+                logger.debug('Didn\'t find valid bucket for %s bounty, making one...', bounty)
+                bucket = Bucket(bounty, self.exclusiveData)
+                buckets.append(bucket)
+
+        logger.info('Finished making buckets')
+
+        return buckets
         
 
     def makeBountyFromAPIData(self, data, characters):
@@ -114,6 +146,8 @@ class Optimise():
             for bounty in characterData:
                 tiersFound = self.getTiers(bounty)
                 bounties[character].append(Bounty(bounty.get('itemHash'), tiersFound))
+
+        logger.debug('Bounties: %s', bounties)
 
         return bounties
 
