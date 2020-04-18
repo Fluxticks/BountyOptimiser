@@ -2,14 +2,25 @@ import logging
 import colorlog
 from coloured_log import ColoredFormatter
 
-def makeColorLog(logName, logLevel = logging.INFO):
+DEBUG_TRACE_NUM = 9
+def trace(self, message, *args, **kws):
+    if self.isEnabledFor(DEBUG_TRACE_NUM):
+        self._log(DEBUG_TRACE_NUM, message, args, **kws)
+logging.Logger.trace = trace
+logging.addLevelName(9, 'TRACE')
+
+def makeLogger(logName, logLevel=logging.INFO):
     LOG_LEVEL = logLevel
-    LOGFORMAT = '  %(name)s : %(log_color)s%(levelname)-8s%(reset)s | %(message)s (%(filename)s:%(lineno)d)'
-    stream = colorlog.StreamHandler()
-    stream.setFormatter(colorlog.ColoredFormatter(LOGFORMAT))
+    LOGFORMAT = '[%(name)s][%(levelname)s] | %(message)s (%(filename)s:%(lineno)d)'
+    #LOGFORMAT = '  [%(name)s][%(levelname)-8s] | %(message)s (%(filename)s:%(lineno)d)'
+    formatter = ColoredFormatter(LOGFORMAT)
+
+    stream = logging.StreamHandler()
+    stream.setLevel(LOG_LEVEL)
+    stream.setFormatter(formatter)
 
     file = logging.FileHandler(logName.lower()+'.log')
-    file.setLevel(logging.INFO)
+    file.setLevel(logging.DEBUG)
     file_format = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     file.setFormatter(file_format)
 
@@ -20,18 +31,14 @@ def makeColorLog(logName, logLevel = logging.INFO):
 
     return logger
 
-def makeLogger(logName, logLevel = logging.INFO):
+def makeColorLog(logName, logLevel=logging.INFO):
     LOG_LEVEL = logLevel
-    LOGFORMAT = '[%(name)s][%(levelname)s]  %(message)s (%(filename)s:%(lineno)d)'
-    #LOGFORMAT = '  [%(name)s][%(levelname)-8s] | %(message)s (%(filename)s:%(lineno)d)'
-    formatter = ColoredFormatter(LOGFORMAT)
-
-    stream = logging.StreamHandler()
-    stream.setLevel(LOG_LEVEL)
-    stream.setFormatter(formatter)
+    LOGFORMAT = '  %(name)s : %(log_color)s%(levelname)-8s%(reset)s | %(message)s (%(filename)s:%(lineno)d)'
+    stream = colorlog.StreamHandler()
+    stream.setFormatter(colorlog.ColoredFormatter(LOGFORMAT))
 
     file = logging.FileHandler(logName.lower()+'.log')
-    file.setLevel(logging.INFO)
+    file.setLevel(logging.DEBUG)
     file_format = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     file.setFormatter(file_format)
 
