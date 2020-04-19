@@ -11,7 +11,7 @@ from util import makeLogger, makeColorLog
 
 BUNGIE = "https://www.bungie.net"
 BASE = BUNGIE + "/Platform/Destiny2/"
-logger = makeColorLog('API')
+logger = makeLogger('API')
 
 #----------------------------------------------------------------------------------------------------------------------
 
@@ -78,7 +78,7 @@ class API():
             return content
 
 
-    def getProfile(self, membershipType, membershipId, components=100):
+    def getProfile(self, membershipType, membershipId, components='100'):
         component = splitComponents(components)
         url = BASE + f"{membershipType}/Profile/{membershipId}/?components={component}"
         content = self.GET(url)
@@ -91,7 +91,7 @@ class API():
         return content
 
 
-    def getCharacter(self, membershipType, membershipId, characterId, components=200):
+    def getCharacter(self, membershipType, membershipId, characterId, components='200'):
         component = splitComponents(components)
         url = BASE + f"{membershipType}/Profile/{membershipId}/Character/{characterId}/?components={component}"
         content = self.GET(url)
@@ -105,8 +105,8 @@ class API():
 
 
     #Get an individual characters inventory
-    def getCharacterInventory(self, membershipType, membershipId, characterId):
-        url = BASE + f"{membershipType}/Profile/{membershipId}/Character/{characterId}/?components=205"
+    def getCharacterInventory(self, membershipType, membershipId, characterId, components='205'):
+        url = BASE + f"{membershipType}/Profile/{membershipId}/Character/{characterId}/?components={components}"
         content = self.GET(url)
         if content is None:
             logger.error('Got None from GET request for Character Inventory: CharacterId (%s), MembershipId (%s), MembershipType (%s)', characterId, membershipId, membershipType)
@@ -118,14 +118,25 @@ class API():
 
 
     #Gets all items including quests and bounties
-    def getProfileInventory(self, membershipType, membershipId):
-        url = BASE + f"{membershipType}/Profile/{membershipId}/?components=102,201"
+    def getProfileInventory(self, membershipType, membershipId, components='102,201'):
+        url = BASE + f"{membershipType}/Profile/{membershipId}/?components={components}"
         content = self.GET(url)
         if content is None:
             logger.error('Got None from GET request for Profile Inventory: MembershipId (%s), MembershipType (%s)', membershipId, membershipType)
         else:
             logger.info('Got profile inventory data for profile id: %s (Type:%s)', membershipId, membershipType)
             logger.debug('Profile Inventory Content: %s', content)
+
+        return content
+
+    def getItem(self, membershipType, membershipId, itemInstance, components='300,302,304,305'):
+        url = BASE + f"{membershipType}/Profile/{membershipId}/Item/{itemInstance}/?components={components}"
+        content = self.GET(url)
+        if content is None:
+            logger.error('Got None from GET request for item %s in profile %s (%s)', itemInstance, membershipId, membershipType)
+        else:
+            logger.debug('Item data for item %s and profile %s: %s', itemInstance, membershipId, content)
+            loggger.info('Got item data for item: %s', itemInstance)
 
         return content
 
