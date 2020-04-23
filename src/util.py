@@ -24,10 +24,15 @@ def makeLogger(logName, logLevel=logging.INFO):
     file_format = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     file.setFormatter(file_format)
 
+    trace_log = logging.FileHandler(logName.lower()+'_trace.log')
+    trace_log.setLevel(DEBUG_TRACE_NUM)
+    trace_log.setFormatter(file_format)
+
     logger = logging.getLogger(logName.upper())
     logger.setLevel(LOG_LEVEL)
     logger.addHandler(stream)
     logger.addHandler(file)
+    logger.addHandler(trace_log)
 
     return logger
 
