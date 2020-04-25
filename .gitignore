@@ -133,3 +133,5 @@ src/coloured_log.py
 *.sqlite3
 
 *.json
+
+src/automaton
