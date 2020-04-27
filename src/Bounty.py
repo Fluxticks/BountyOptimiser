@@ -1,23 +1,14 @@
 class Bounty():
 
-    def __init__(self, itemHash:int, objectives:list):
+    def __init__(self, itemHash:int, description:str):
         self._itemHash = itemHash
-        self._objectives = objectives
-        self._relatedBounty = None
+        self._description = description
 
     @property
     def itemHash(self):
         return self._itemHash
     
     @property
-    def objectives(self):
-        return self._objectives
-
-    @property
-    def relatedBounty(self):
-        return self._relatedBounty
-    
-    @relatedBounty.setter
-    def relatedBounty(self, bounty):
-        self._relatedBounty = bounty
+    def description(self):
+        return self._description
     
