@@ -81,7 +81,7 @@ class Optimise():
             automaton = self.buckets(weapons)
             assert automaton is not None, "Unable to load automaton"
 
-            #self.dothing(bounties, automaton)
+            self.doall(characters, bounties, automaton)
 
         except AssertionError as e:
             logger.error("Assertion Error: %s", e.args)
@@ -92,10 +92,16 @@ class Optimise():
 
 
     def doall(self, characters, bounties, A):
-        data = dict.fromkeys(characters, [])
+        data = dict.fromkeys(characters)
+
+        for character in characters:
+            data[character] = self.dothing(bounties.get(character), A)
+
+        return data
+
 
     def dothing(self, bounties, A):
-        for bounty in bounties.get('2305843009301295844'):
+        for bounty in bounties:
             description = bounty.description.lower()
             logger.debug('For description: %s got items: ', description)
             for end_index, (insert_order, original_value) in A.iter(description):
