@@ -11,7 +11,9 @@ logging.addLevelName(9, 'TRACE')
 
 def makeLogger(logName, logLevel=logging.INFO):
     LOG_LEVEL = logLevel
-    LOGFORMAT = '[%(name)s][%(levelname)s] | %(message)s (%(filename)s:%(lineno)d)'
+    logName = logName.upper()
+    length = 10-len(logName)
+    LOGFORMAT = '[%(name)s]'+' '*length+'%(levelname)-15s | %(message)s (%(filename)s:%(lineno)d)'
     #LOGFORMAT = '  [%(name)s][%(levelname)-8s] | %(message)s (%(filename)s:%(lineno)d)'
     formatter = ColoredFormatter(LOGFORMAT)
 
@@ -28,7 +30,7 @@ def makeLogger(logName, logLevel=logging.INFO):
     trace_log.setLevel(DEBUG_TRACE_NUM)
     trace_log.setFormatter(file_format)
 
-    logger = logging.getLogger(logName.upper())
+    logger = logging.getLogger(logName)
     logger.setLevel(LOG_LEVEL)
     logger.addHandler(stream)
     logger.addHandler(file)
