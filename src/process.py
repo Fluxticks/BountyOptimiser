@@ -39,11 +39,11 @@ class Optimise():
         with open('automaton', 'rb') as f:
             A = pickle.load(f)
 
-        logger.trace('Loaded automaton with keys: %s', list(A.keys()))
+        logger.debug('Loaded automaton with keys: %s', list(A.keys()))
 
-        keys = weapons 
+        keys = list(weapons.keys())
 
-        logger.trace('keys: %s', keys)
+        logger.debug('keys: %s', keys)
 
         for index,word in enumerate(keys):
             A.add_word(word, (index, word))
@@ -51,6 +51,7 @@ class Optimise():
         A.make_automaton()
 
         logger.debug('Automaton kind: %s , store: %s, size: %s', A.kind, A.store, A.__sizeof__())
+
 
         return A
 
@@ -78,10 +79,15 @@ class Optimise():
             weapons = self.getWeaponBuckets(items, characters)
             assert weapons is not None, "Unable to get weapon data"
 
+            identifiers = weapons
+
+            with open('identifiers.json') as f:
+                identifiers.update(json.load(f))
+
             automaton = self.buckets(weapons)
             assert automaton is not None, "Unable to load automaton"
 
-            self.doall(characters, bounties, automaton)
+            self.doall(characters, bounties, automaton, identifiers)
 
         except AssertionError as e:
             logger.error("Assertion Error: %s", e.args)
@@ -91,23 +97,28 @@ class Optimise():
         logger.debug('Finished task in %s time!', float(t2-t1)/1000000000)
 
 
-    def doall(self, characters, bounties, A):
+    def doall(self, characters, bounties, A, identifiers):
         data = dict.fromkeys(characters)
 
         for character in characters:
-            data[character] = self.dothing(bounties.get(character), A)
+            data[character] = self.dothing(bounties.get(character), A, identifiers)
 
         return data
 
 
-    def dothing(self, bounties, A):
+    def dothing(self, bounties, A, identifiers):
         for bounty in bounties:
             description = bounty.description.lower()
-            logger.debug('For description: %s got items: ', description)
+            logger.debug('For description: %s getting items', description)
             for end_index, (insert_order, original_value) in A.iter(description):
-                start_index = end_index - len(original_value) + 1
-                print((start_index, end_index, (insert_order, original_value)))
-                assert description[start_index:start_index + len(original_value)] == original_value 
+                # Original value is the word found
+                #start_index = end_index - len(original_value) + 1
+                #print((start_index, end_index, (insert_order, original_value)))
+                slots = identifiers.get(original_value)
+                bounty.add(slots, original_value)
+                # Checks if somehow there was a fuckup
+                #assert description[start_index:start_index + len(original_value)] == original_value
+            print(str(bounty))
 
 
     def dataToBounty(self, bounty):
@@ -171,7 +182,7 @@ class Optimise():
 
     def getWeaponBuckets(self, items, characterIds):
         logger.debug('Getting weapons and buckets')
-        weaponHashes = [BucketEnum.KINETIC_WEAPONS, BucketEnum.ENERGY_WEAPONS, BucketEnum.POWER_WEAPONS]
+        weaponHashes = {BucketEnum.KINETIC_WEAPONS:"kinetic", BucketEnum.ENERGY_WEAPONS:"energy", BucketEnum.POWER_WEAPONS:"power"}
         characterInventories = items.get('characterInventories').get('data')
         vaultInventory = items.get('profileInventory').get('data').get('items')
         items = vaultInventory + self.makeListFromCharItems(characterInventories)
@@ -179,10 +190,7 @@ class Optimise():
         logger.trace('Weapons data: %s', items)
         logger.info("Got all items for characters (%d) and Vault", len(characterIds))
 
-        kinetic = {}
-        energy = {}
-        power = {}
-        weapons = []
+        weapons = {}
         current = None
         try:
             for item in items:
@@ -194,45 +202,24 @@ class Optimise():
 
                 wasWeapon = False
 
-                if bucketHash == BucketEnum.KINETIC_WEAPONS:
-                    if not kinetic.get(weaponType):
-                        kinetic[weaponType] = []
-                    kinetic[weaponType].append(itemInstance)
-                    wasWeapon = True
-                elif bucketHash == BucketEnum.ENERGY_WEAPONS:
-                    if not energy.get(weaponType):
-                        energy[weaponType] = []
-                    energy[weaponType].append(itemInstance)
-                    wasWeapon = True
-                elif bucketHash == BucketEnum.POWER_WEAPONS:
-                    if not power.get(weaponType):
-                        power[weaponType] = []
-                    power[weaponType].append(itemInstance)
+                if bucketHash in weaponHashes:
+                    if weaponType not in weapons:
+                        weapons[weaponType] = set()
+                    weapons[weaponType].add(weaponHashes.get(bucketHash))
                     wasWeapon = True
 
-                
                 if wasWeapon:
                     if weaponType not in weapons:
                         weapons.append(weaponType)
                     logger.trace('Type: %s, hash: %s, instance: %s', weaponType, bucketHash, itemInstance)
 
-            power['bow'] = power.pop('combat bow', None)
-            energy['bow'] = energy.pop('combat bow', None)
-            kinetic['bow'] = kinetic.pop('combat bow', None)
-            try:
-                weapons.remove('combat bow')
-                weapons.append('bow')
-                logger.debug('Replaced combat bow with bow')
-            except:
-                pass
+            weapons["bow"] = weapons.pop("combat bow", None)
 
-            logger.trace('Got power bucket: %s', power)
-            logger.trace('Got energy bucket: %s', energy)
-            logger.trace('Got kinetic bucket: %s', kinetic)
+            logger.trace("Got weapons: %s", weapons)
 
             logger.info('Got weapon buckets!')
         except AttributeError as e:
-            logger.error('There was an error when accesing the data in item %s', current)
+            logger.error('There was an error when accesing the data in item %s, (%s)', current, e)
         except ManifestError as e:
             logger.error('There was an error when accesing the DB (%s) using the statement: %s', e.SQL)
         return weapons
