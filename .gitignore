@@ -135,3 +135,5 @@ src/coloured_log.py
 *.json
 
 src/automaton
+
+src/identifiers
