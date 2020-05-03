@@ -89,11 +89,12 @@ def dprint(data, parent='data', level=0):
         if isinstance(value, dict):
             dprint(value, parent=key, level=level + 1)
         elif isinstance(value, list):
-            cprint('{}' + tabs + key + '{}: {}{}{}', bcolours.ERROR, bcolours.WARNING, value, bcolours.ENDC)
+            value = [str(x) for x in value]
+            cprint('{}' + tabs + key + '{}: {}{}{}', bcolours.ERROR, bcolours.WARNING, str(value), bcolours.ENDC)
         elif isinstance(value, int):
-            cprint('{}' + tabs + key + '{}: {}{}{}', bcolours.ERROR, bcolours.OKGREEN, value, bcolours.ENDC)
+            cprint('{}' + tabs + key + '{}: {}{}{}', bcolours.ERROR, bcolours.OKGREEN, str(value), bcolours.ENDC)
         elif isinstance(value, str):
-            cprint('{}' + tabs + key + '{}: {}', bcolours.ERROR, value)
+            cprint('{}' + tabs + key + '{}: {}', bcolours.ERROR, str(value))
 
 
 def cprint(text, colour, *args):
