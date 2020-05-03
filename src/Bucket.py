@@ -1,61 +1,45 @@
 class Bucket():
 
-    def __init__(self, bounty, exclusive):
-        self._objectives = []
-        self._bounties = []
-        self.exclusiveObjectives = exclusive
-        self.addBounty(bounty)
+    def __init__(self, bounty):
+        self._bounties = [bounty]
+        self._identifiers = {}
+        self.add(bounty)
 
-    def __str__(self):
-        return self.toString()
+    def addWeapon(self, weapon):
+        weaponType = list(weapon.keys())[0]
 
-    def __repr__(self):
-        return self.toString()
+        slots = []
 
-    def toString(self):
-        output = {}
-        for bounty in self.bounties:
-            output[bounty.itemHash] = bounty.objectives
-        return str(output)
+        for value in weapon.values():
+            if value in self._identifiers:
+                if weaponType == self._identifiers[value]:
+                    slots.append(value)
+            else:
+                slots.append(value)
 
+        return slots
 
-    @property
-    def bounties(self):
-        return self._bounties
+    def add(self, bounty):
+        data = bounty.data
+        weapons = data.get('weapons')
 
-    @property
-    def objectives(self):
-        return self._objectives
+        if weapons is not None:
+            slots = self.addWeapon(weapons)
+            if len(slots) == 0:
+                return False
 
-    @property
-    def size(self):
-        return len(self.bounties)
+        data.pop('weapons', None)
 
+        valid = True
 
-    def __addObjectives(self, objectives):
+        for key,value in data:
+            if not (self._identifiers.get(key) is None or self._identifiers.get(key) == value):
+                valid = False
 
-        for objective in objectives:
-            if objective not in self._objectives:
-                self._objectives.append(objective)
+        if valid:
+            for slot in slots:
+                    self._identifiers[slot] = list(weapons.keys())[0]
+            for key,value in data:
+                self._identifiers[key] = value
 
-    def addBounty(self, bounty):
-        bountyObjectives = bounty.objectives
-
-        for tObjective in bountyObjectives:
-            for mObjective in self.objectives:
-                if self.exclusiveObjectives.get(mObjective) is not None:
-                    if tObjective in self.exclusiveObjectives.get(mObjective):
-                        return False
-
-        self._bounties.append(bounty)
-        self.__addObjectives(bountyObjectives)
-        return True
-
-    def addExclusives(self, exclusiveData):
-
-        key = list(exclusiveData.keys())[0]
-
-        if key not in self.exclusiveObjectives:
-            self.exclusiveObjectives[key] = exclusiveData.get(key)
-            return True
-        return False
+        return valid

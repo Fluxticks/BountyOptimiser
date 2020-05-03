@@ -30,7 +30,7 @@ class Optimise():
         self._manifestLoc = manifest
         logger.debug('Manifest loc: %s', self._manifestLoc)
 
-    def buckets(self, weapons):
+    def buckets(self, weapons, others):
 
         #enemies = {'cabal' : ['edz','io','mars','tangled shore'], 'fallen' : ['edz', 'titan', 'nessus', 'tangled shore', 'moon'], 'hive' : ['titan','mars','tangled shore', 'dreaming city', 'moon'], 'taken':['edz', 'io', 'dreaming city'], 'scorn':['tangled shore','dreaming city'], 'vex':['io','nessus', 'moon'], 'guardian':['crucible']}
 
@@ -41,7 +41,7 @@ class Optimise():
 
         logger.debug('Loaded automaton with keys: %s', list(A.keys()))
 
-        keys = list(weapons.keys())
+        keys = list(weapons.keys()) + list(others.keys())
 
         logger.debug('keys: %s', keys)
 
@@ -76,18 +76,17 @@ class Optimise():
 
             bounties = self.getBounties(items, characters)
             assert bounties is not None, "Unable to get bounty data"
-            weapons = self.getWeaponBuckets(items, characters)
-            assert weapons is not None, "Unable to get weapon data"
+            weaponIdentifiers = self.getWeaponBuckets(items, characters)
+            assert weaponIdentifiers is not None, "Unable to get weapon data"
 
-            identifiers = weapons
+            with open('identifiers', 'rb') as f:
+                otherIdentifiers = pickle.load(f)
 
-            with open('identifiers.json') as f:
-                identifiers.update(json.load(f))
-
-            automaton = self.buckets(weapons)
+            automaton = self.buckets(weaponIdentifiers, otherIdentifiers)
             assert automaton is not None, "Unable to load automaton"
 
-            self.doall(characters, bounties, automaton, identifiers)
+            wordedBounites = self.findWordsInAll(characters, bounties, automaton, weaponIdentifiers, otherIdentifiers)
+            assert wordedBounites is not None, "There was an error when trying to find key words"
 
         except AssertionError as e:
             logger.error("Assertion Error: %s", e.args)
@@ -97,27 +96,40 @@ class Optimise():
         logger.debug('Finished task in %s time!', float(t2-t1)/1000000000)
 
 
-    def doall(self, characters, bounties, A, identifiers):
+    def doBuckets(self, characters, bounties):
+
+        buckets = []
+
+        pass
+
+
+
+    def findWordsInAll(self, characters, bounties, A, weaponIdentifiers, otherIdentifiers):
         data = dict.fromkeys(characters)
 
         for character in characters:
-            data[character] = self.dothing(bounties.get(character), A, identifiers)
+            logger.debug('Doing character: %s', character )
+            data[character] = self.findWords(bounties.get(character), A, weaponIdentifiers, otherIdentifiers)
 
         return data
 
 
-    def dothing(self, bounties, A, identifiers):
+    def findWords(self, bounties, A, weaponIdentifiers, otherIdentifiers):
         for bounty in bounties:
             description = bounty.description.lower()
             logger.debug('For description: %s getting items', description)
+            counter = 0
             for end_index, (insert_order, original_value) in A.iter(description):
                 # Original value is the word found
                 #start_index = end_index - len(original_value) + 1
                 #print((start_index, end_index, (insert_order, original_value)))
-                slots = identifiers.get(original_value)
-                bounty.add(slots, original_value)
                 # Checks if somehow there was a fuckup
                 #assert description[start_index:start_index + len(original_value)] == original_value
+                counter += 1
+                if original_value in weaponIdentifiers:
+                    bounty.addWeapon(weaponIdentifiers.get(original_value), original_value)
+                else:
+                    bounty.addGeneral(otherIdentifiers.get(original_value), original_value)
             print(str(bounty))
 
 
@@ -155,9 +167,12 @@ class Optimise():
         logger.debug('Getting Bounties')
         characterInventories = items.get('characterInventories').get('data')
 
-        bounties = dict.fromkeys(characterIds, [])
+        
+        bounties = {}
+
         try:
             for character in characterIds:
+                bounties[character] = []
                 for item in characterInventories.get(character).get('items'):
                     if item.get('bucketHash') == BucketEnum.QUESTS and item.get('expirationDate') is not None:
                         itemDefinition = self.getValueFromTable(hashID(item.get('itemHash')), 'DestinyInventoryItemDefinition')
@@ -182,7 +197,7 @@ class Optimise():
 
     def getWeaponBuckets(self, items, characterIds):
         logger.debug('Getting weapons and buckets')
-        weaponHashes = {BucketEnum.KINETIC_WEAPONS:"kinetic", BucketEnum.ENERGY_WEAPONS:"energy", BucketEnum.POWER_WEAPONS:"power"}
+        weaponHashes = {BucketEnum.KINETIC_WEAPONS:"kinetic weapon", BucketEnum.ENERGY_WEAPONS:"energy weapon", BucketEnum.POWER_WEAPONS:"power weapon"}
         characterInventories = items.get('characterInventories').get('data')
         vaultInventory = items.get('profileInventory').get('data').get('items')
         items = vaultInventory + self.makeListFromCharItems(characterInventories)
