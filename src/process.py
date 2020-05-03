@@ -88,6 +88,8 @@ class Optimise():
             wordedBounites = self.findWordsInAll(characters, bounties, automaton, weaponIdentifiers, otherIdentifiers)
             assert wordedBounites is not None, "There was an error when trying to find key words"
 
+            doneBuckets = self.allBuckets(characters, wordedBounites)
+
         except AssertionError as e:
             logger.error("Assertion Error: %s", e.args)
 
@@ -96,21 +98,72 @@ class Optimise():
         logger.debug('Finished task in %s time!', float(t2-t1)/1000000000)
 
 
-    def doBuckets(self, characters, bounties):
+    def allBuckets(self, characters, bounties):
+        logger.info('Calculating buckets!')
+        out = {}
+
+        for character in characters:
+            out[character] = self.doBuckets(bounties.get(character))
+            if out[character] is not None:
+                logger.debug('For character %s, got final buckets (%s) of: %s', character, len(out[character]),[str(x) for x in out[character]])
+
+        return out
+
+
+    def doBuckets(self, bounties):
+        logger.info('Next character...')
+        if bounties is None:
+            return None
 
         buckets = []
 
-        pass
+        for bounty in bounties:
+
+            for bucket in buckets:
+                bucket.add(bounty)
+            buckets.append(Bucket(bounty))
+
+        return self.trim(buckets)
+
+
+    def trim(self, buckets):
+        logger.info('Trimming buckets')
+
+        #print([len(x) for x in buckets])
+
+        buckets.sort(key=lambda x: len(x), reverse=True)
+
+        #print([len(x) for x in buckets])
+        #print([str(x) for x in buckets])
+        for i in range(len(buckets)):
+            current = buckets[i]
+            current = current.bounties
+            #logger.debug('Triming %s bucket from others...', current)
+            for j in range(i+1, len(buckets)):
+                #logger.debug('Trimming bucket: %s', buckets[j])
+                buckets[j].trim(current)
+
+        #print([len(x) for x in buckets])
+
+        logger.info('Done trimming!')
+
+        return list(filter(lambda a: len(a) > 0, buckets))
+
+
 
 
 
     def findWordsInAll(self, characters, bounties, A, weaponIdentifiers, otherIdentifiers):
+        logger.info('Finding keywords in bounties')
         data = dict.fromkeys(characters)
 
         for character in characters:
             logger.debug('Doing character: %s', character )
             data[character] = self.findWords(bounties.get(character), A, weaponIdentifiers, otherIdentifiers)
 
+        logger.debug('Got keywords for all characters: %s', data)
+        logger.info('Found keywords for all characters!')
+        #dprint(data)
         return data
 
 
@@ -130,7 +183,7 @@ class Optimise():
                     bounty.addWeapon(weaponIdentifiers.get(original_value), original_value)
                 else:
                     bounty.addGeneral(otherIdentifiers.get(original_value), original_value)
-            print(str(bounty))
+        return bounties
 
 
     def dataToBounty(self, bounty):
@@ -197,7 +250,7 @@ class Optimise():
 
     def getWeaponBuckets(self, items, characterIds):
         logger.debug('Getting weapons and buckets')
-        weaponHashes = {BucketEnum.KINETIC_WEAPONS:"kinetic weapon", BucketEnum.ENERGY_WEAPONS:"energy weapon", BucketEnum.POWER_WEAPONS:"power weapon"}
+        weaponHashes = {BucketEnum.KINETIC_WEAPONS:"kinetic", BucketEnum.ENERGY_WEAPONS:"energy", BucketEnum.POWER_WEAPONS:"power"}
         characterInventories = items.get('characterInventories').get('data')
         vaultInventory = items.get('profileInventory').get('data').get('items')
         items = vaultInventory + self.makeListFromCharItems(characterInventories)
@@ -229,6 +282,7 @@ class Optimise():
                     logger.trace('Type: %s, hash: %s, instance: %s', weaponType, bucketHash, itemInstance)
 
             weapons["bow"] = weapons.pop("combat bow", None)
+            weapons[" machine gun"] = weapons.pop("machine gun", None)
 
             logger.trace("Got weapons: %s", weapons)
 
