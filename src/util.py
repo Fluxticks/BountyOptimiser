@@ -11,7 +11,9 @@ logging.addLevelName(9, 'TRACE')
 
 def makeLogger(logName, logLevel=logging.INFO):
     LOG_LEVEL = logLevel
-    LOGFORMAT = '[%(name)s][%(levelname)s] | %(message)s (%(filename)s:%(lineno)d)'
+    logName = logName.upper()
+    length = 10-len(logName)
+    LOGFORMAT = '[%(name)s]'+' '*length+'%(levelname)-15s | %(message)s (%(filename)s:%(lineno)d)'
     #LOGFORMAT = '  [%(name)s][%(levelname)-8s] | %(message)s (%(filename)s:%(lineno)d)'
     formatter = ColoredFormatter(LOGFORMAT)
 
@@ -24,10 +26,15 @@ def makeLogger(logName, logLevel=logging.INFO):
     file_format = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     file.setFormatter(file_format)
 
-    logger = logging.getLogger(logName.upper())
+    trace_log = logging.FileHandler(logName.lower()+'_trace.log')
+    trace_log.setLevel(DEBUG_TRACE_NUM)
+    trace_log.setFormatter(file_format)
+
+    logger = logging.getLogger(logName)
     logger.setLevel(LOG_LEVEL)
     logger.addHandler(stream)
     logger.addHandler(file)
+    logger.addHandler(trace_log)
 
     return logger
 
@@ -82,11 +89,12 @@ def dprint(data, parent='data', level=0):
         if isinstance(value, dict):
             dprint(value, parent=key, level=level + 1)
         elif isinstance(value, list):
-            cprint('{}' + tabs + key + '{}: {}{}{}', bcolours.ERROR, bcolours.WARNING, value, bcolours.ENDC)
+            value = [str(x) for x in value]
+            cprint('{}' + tabs + key + '{}: {}{}{}', bcolours.ERROR, bcolours.WARNING, str(value), bcolours.ENDC)
         elif isinstance(value, int):
-            cprint('{}' + tabs + key + '{}: {}{}{}', bcolours.ERROR, bcolours.OKGREEN, value, bcolours.ENDC)
+            cprint('{}' + tabs + key + '{}: {}{}{}', bcolours.ERROR, bcolours.OKGREEN, str(value), bcolours.ENDC)
         elif isinstance(value, str):
-            cprint('{}' + tabs + key + '{}: {}', bcolours.ERROR, value)
+            cprint('{}' + tabs + key + '{}: {}', bcolours.ERROR, str(value))
 
 
 def cprint(text, colour, *args):

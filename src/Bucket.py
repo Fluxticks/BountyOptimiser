@@ -1,61 +1,83 @@
-class Bucket():
+from util import makeLogger
+import logging
 
-    def __init__(self, bounty, exclusive):
-        self._objectives = []
-        self._bounties = []
-        self.exclusiveObjectives = exclusive
-        self.addBounty(bounty)
+class Bucket:
 
-    def __str__(self):
-        return self.toString()
-
-    def __repr__(self):
-        return self.toString()
-
-    def toString(self):
-        output = {}
-        for bounty in self.bounties:
-            output[bounty.itemHash] = bounty.objectives
-        return str(output)
-
+    def __init__(self, bounty):
+        self._logger = makeLogger('bucket', logLevel=logging.DEBUG)
+        self._bounties = set()
+        self._identifiers = {}
+        self.add(bounty)
 
     @property
     def bounties(self):
         return self._bounties
 
-    @property
-    def objectives(self):
-        return self._objectives
+    def __str__(self):
+        return str(self._identifiers)
 
-    @property
-    def size(self):
+    def trim(self, bounties):
+        
+        for bounty in bounties:
+            self._bounties.discard(bounty)
+
+    def addWeapon(self, weapon):
+        self._logger.debug('Attempting adding weapon components: %s', weapon)
+        weaponType = list(weapon.keys())[0]
+
+        slots = []
+        foundWeapons = [self._identifiers.get('kinetic'),self._identifiers.get('energy'), self._identifiers.get('power')]
+
+        foundWeapons = list(filter(lambda a: a is not None, foundWeapons))
+
+        print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"+str(foundWeapons))
+
+        values = list(weapon.values())[0]
+
+        for value in values:
+            if value in self._identifiers:
+                if weaponType == self._identifiers[value]:
+                    slots.append(value)
+                elif foundWeapons.count(self._identifiers.get(value)) > 1:
+                    slots.append(value)
+                    foundWeapons.remove(self._identifiers.get(value))
+
+            else:
+                slots.append(value)
+
+        self._logger.debug('Finished calculating weapons')
+
+        return slots
+
+    def add(self, bounty):
+        self._logger.debug('Adding bounty')
+        data = bounty.data
+        weapons = data.get('weapons')
+        slots = []
+        if weapons:
+            slots = self.addWeapon(weapons)
+            if len(slots) == 0:
+                self._logger.debug('Unable to add due to conflict with weapons')
+                return False
+
+        data.pop('weapons', None)
+
+        valid = True
+
+        for key, value in data.items():
+            if not (self._identifiers.get(key) is None or self._identifiers.get(key) == value):
+                self._logger.debug('Unable to add due to the following conflict: %s,%s', key, value)
+                return False
+
+        if valid:
+            self._logger.debug('Valid addition to bucket')
+            self._bounties.add(bounty)
+            for slot in slots:
+                self._identifiers[slot] = list(weapons.keys())[0]
+            for key, value in data.items():
+                self._identifiers[key] = value
+
+        return valid
+
+    def __len__(self):
         return len(self.bounties)
-
-
-    def __addObjectives(self, objectives):
-
-        for objective in objectives:
-            if objective not in self._objectives:
-                self._objectives.append(objective)
-
-    def addBounty(self, bounty):
-        bountyObjectives = bounty.objectives
-
-        for tObjective in bountyObjectives:
-            for mObjective in self.objectives:
-                if self.exclusiveObjectives.get(mObjective) is not None:
-                    if tObjective in self.exclusiveObjectives.get(mObjective):
-                        return False
-
-        self._bounties.append(bounty)
-        self.__addObjectives(bountyObjectives)
-        return True
-
-    def addExclusives(self, exclusiveData):
-
-        key = list(exclusiveData.keys())[0]
-
-        if key not in self.exclusiveObjectives:
-            self.exclusiveObjectives[key] = exclusiveData.get(key)
-            return True
-        return False
