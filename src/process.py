@@ -18,11 +18,12 @@ import ahocorasick as aho
 from time import process_time_ns
 import pickle
 
-from Exceptions import APIException, GeneralException
+from Exceptions import APIException, GeneralException, ManifestError, DiscordError
 
-logger = makeLogger('Optimiser', logLevel=logging.DEBUG)
+logger = makeLogger('Optimiser', logLevel=logging.INFO)
 
-class Optimise():
+
+class Optimise:
 
     def __init__(self, token, manifest):
         logger.debug('Initialised optimiser')
@@ -32,9 +33,9 @@ class Optimise():
 
     def buckets(self, weapons, others):
 
-        #enemies = {'cabal' : ['edz','io','mars','tangled shore'], 'fallen' : ['edz', 'titan', 'nessus', 'tangled shore', 'moon'], 'hive' : ['titan','mars','tangled shore', 'dreaming city', 'moon'], 'taken':['edz', 'io', 'dreaming city'], 'scorn':['tangled shore','dreaming city'], 'vex':['io','nessus', 'moon'], 'guardian':['crucible']}
+        # enemies = {'cabal' : ['edz','io','mars','tangled shore'], 'fallen' : ['edz', 'titan', 'nessus', 'tangled shore', 'moon'], 'hive' : ['titan','mars','tangled shore', 'dreaming city', 'moon'], 'taken':['edz', 'io', 'dreaming city'], 'scorn':['tangled shore','dreaming city'], 'vex':['io','nessus', 'moon'], 'guardian':['crucible']}
 
-        #locations = ['edz','io','mars','tangled shore', 'titan', 'moon', 'dreaming city', 'crucible']
+        # locations = ['edz','io','mars','tangled shore', 'titan', 'moon', 'dreaming city', 'crucible']
 
         with open('automaton', 'rb') as f:
             A = pickle.load(f)
@@ -45,34 +46,41 @@ class Optimise():
 
         logger.debug('keys: %s', keys)
 
-        for index,word in enumerate(keys):
+        for index, word in enumerate(keys):
             A.add_word(word, (index, word))
 
         A.make_automaton()
 
         logger.debug('Automaton kind: %s , store: %s, size: %s', A.kind, A.store, A.__sizeof__())
 
-
         return A
 
-        
-    def performOptimisation(self, player):
+    def performOptimisation(self, player=None, index=None, member=None, platform=None):
+
+        if player is None and (member is None or platform is None):
+            raise ValueError(
+                "You must supply your Display Name or your MemeberID and your PlatformID. MemberID and PlatformID can be found using the !help command")
 
         t1 = process_time_ns()
+
+        doneBuckets = None
+
         try:
 
-            profile = self.getPlayerData(player)
-            assert profile is not None, "Unable to get profile data"
+            if player is not None:
+                profile = self.getPlayerData(player, index)
+                assert profile is not None, "Unable to get profile data"
+                member = profile[1]
+                platform = profile[0]
 
-            playerId = profile[1]
-            playerType = profile[0]
-
-            items = self.getAllItems(playerType, playerId)
+            items = self.getAllItems(platform, member)
             assert items is not None, "Unable to get item data"
 
-            characters = self.getCharacters(playerType, playerId)
-            logger.debug('Characters: %s', characters)
-            assert characters is not None, "Unable to get character data"
+            characters, displayName = self.getCharacters(platform, member)
+            assert characters is not None, "Unable to get character ids"
+
+            characterData = self.getCharacterData(platform, member, characters)
+            assert characterData is not None, "Unable to get character data"
 
             bounties = self.getBounties(items, characters)
             assert bounties is not None, "Unable to get bounty data"
@@ -95,8 +103,10 @@ class Optimise():
 
         t2 = process_time_ns()
 
-        logger.debug('Finished task in %s time!', float(t2-t1)/1000000000)
+        logger.debug('Finished task in %s time!', float(t2 - t1) / 1000000000)
+        logger.info('Finished finding optimal bounties!')
 
+        return {'data': doneBuckets, 'name': displayName, 'id': member, 'type': platform, 'characters':characterData}
 
     def allBuckets(self, characters, bounties):
         logger.info('Calculating buckets!')
@@ -105,10 +115,10 @@ class Optimise():
         for character in characters:
             out[character] = self.doBuckets(bounties.get(character))
             if out[character] is not None:
-                logger.debug('For character %s, got final buckets (%s) of: %s', character, len(out[character]),[str(x) for x in out[character]])
+                logger.debug('For character %s, got final buckets (%s) of: %s', character, len(out[character]),
+                             [str(x) for x in out[character]])
 
         return out
-
 
     def doBuckets(self, bounties):
         logger.info('Next character...')
@@ -118,54 +128,49 @@ class Optimise():
         buckets = []
 
         for bounty in bounties:
-
+            result = False
             for bucket in buckets:
-                bucket.add(bounty)
-            buckets.append(Bucket(bounty))
+                result = bucket.add(bounty)
+            if not result:
+                buckets.append(Bucket(bounty))
 
         return self.trim(buckets)
-
 
     def trim(self, buckets):
         logger.info('Trimming buckets')
 
-        #print([len(x) for x in buckets])
+        # print([len(x) for x in buckets])
 
         buckets.sort(key=lambda x: len(x), reverse=True)
 
-        #print([len(x) for x in buckets])
-        #print([str(x) for x in buckets])
+        # print([len(x) for x in buckets])
+        # print([str(x) for x in buckets])
         for i in range(len(buckets)):
             current = buckets[i]
             current = current.bounties
-            #logger.debug('Triming %s bucket from others...', current)
-            for j in range(i+1, len(buckets)):
-                #logger.debug('Trimming bucket: %s', buckets[j])
+            # logger.debug('Triming %s bucket from others...', current)
+            for j in range(i + 1, len(buckets)):
+                # logger.debug('Trimming bucket: %s', buckets[j])
                 buckets[j].trim(current)
 
-        #print([len(x) for x in buckets])
+        # print([len(x) for x in buckets])
 
         logger.info('Done trimming!')
 
         return list(filter(lambda a: len(a) > 0, buckets))
-
-
-
-
 
     def findWordsInAll(self, characters, bounties, A, weaponIdentifiers, otherIdentifiers):
         logger.info('Finding keywords in bounties')
         data = dict.fromkeys(characters)
 
         for character in characters:
-            logger.debug('Doing character: %s', character )
+            logger.debug('Doing character: %s', character)
             data[character] = self.findWords(bounties.get(character), A, weaponIdentifiers, otherIdentifiers)
 
         logger.debug('Got keywords for all characters: %s', data)
         logger.info('Found keywords for all characters!')
-        #dprint(data)
+        # dprint(data)
         return data
-
 
     def findWords(self, bounties, A, weaponIdentifiers, otherIdentifiers):
         for bounty in bounties:
@@ -174,24 +179,24 @@ class Optimise():
             counter = 0
             for end_index, (insert_order, original_value) in A.iter(description):
                 # Original value is the word found
-                #start_index = end_index - len(original_value) + 1
-                #print((start_index, end_index, (insert_order, original_value)))
+                # start_index = end_index - len(original_value) + 1
+                # print((start_index, end_index, (insert_order, original_value)))
                 # Checks if somehow there was a fuckup
-                #assert description[start_index:start_index + len(original_value)] == original_value
+                # assert description[start_index:start_index + len(original_value)] == original_value
                 counter += 1
                 if original_value in weaponIdentifiers:
                     bounty.addWeapon(weaponIdentifiers.get(original_value), original_value)
                 else:
                     bounty.addGeneral(otherIdentifiers.get(original_value), original_value)
+            logger.debug('Bounty data: %s', bounty.data)
         return bounties
-
 
     def dataToBounty(self, bounty):
         manifest = bounty.get('manifest')
         itemHash = bounty.get('itemHash')
         description = manifest.get('displayProperties').get('description')
-        return Bounty(itemHash, description)
-
+        title = manifest.get('displayProperties').get('name')
+        return Bounty(itemHash, description, title)
 
     def makeListFromCharItems(self, characters):
         charIds = list(characters.keys())
@@ -203,24 +208,21 @@ class Optimise():
 
         return items
 
-
     def getAllItems(self, membershipType, membershipId):
         logger.debug('Getting All Items')
         try:
             response = self._api.getProfileInventory(membershipType, membershipId)
             logger.trace('Got response for GetInventory call: %s', response)
             logger.debug('Got all items for member %s (%s)', membershipId, membershipType)
+            return response
         except APIException as e:
-            logger.error('There was an error when trying to retrieve items: %s', e.message)
-
-        return response
-
+            logger.error('There was an error when trying to retrieve items: %s, url: %s', e.message, e.url)
+            raise DiscordError(e.message)
 
     def getBounties(self, items, characterIds):
         logger.debug('Getting Bounties')
         characterInventories = items.get('characterInventories').get('data')
 
-        
         bounties = {}
 
         try:
@@ -228,12 +230,14 @@ class Optimise():
                 bounties[character] = []
                 for item in characterInventories.get(character).get('items'):
                     if item.get('bucketHash') == BucketEnum.QUESTS and item.get('expirationDate') is not None:
-                        itemDefinition = self.getValueFromTable(hashID(item.get('itemHash')), 'DestinyInventoryItemDefinition')
+                        itemDefinition = self.getValueFromTable(hashID(item.get('itemHash')),
+                                                                'DestinyInventoryItemDefinition')
                         if CategoryEnum.QUEST_STEP not in itemDefinition.get('itemCategoryHashes'):
                             item['manifest'] = itemDefinition
                             bounty = self.dataToBounty(item)
                             bounties[character].append(bounty)
-                            logger.debug('Appended hashed bounty for character %s : %s', character, item.get('itemHash'))
+                            logger.debug('Appended hashed bounty for character %s : %s', character,
+                                         item.get('itemHash'))
                             logger.trace('Bounty: description: %s', bounty.description)
 
             logger.trace('Bounty data: %s', bounties)
@@ -242,15 +246,16 @@ class Optimise():
             logger.error('There was an error getting bounties from item data')
             return None
         except ManifestError as e:
-            logger.error('There was an error when accesing the DB (%s) using the statement: %s', self._manifestLoc, e.SQL)
+            logger.error('There was an error when accesing the DB (%s) using the statement: %s', self._manifestLoc,
+                         e.SQL)
             return None
-        
-        return bounties
 
+        return bounties
 
     def getWeaponBuckets(self, items, characterIds):
         logger.debug('Getting weapons and buckets')
-        weaponHashes = {BucketEnum.KINETIC_WEAPONS:"kinetic", BucketEnum.ENERGY_WEAPONS:"energy", BucketEnum.POWER_WEAPONS:"power"}
+        weaponHashes = {BucketEnum.KINETIC_WEAPONS: "kinetic", BucketEnum.ENERGY_WEAPONS: "energy",
+                        BucketEnum.POWER_WEAPONS: "power"}
         characterInventories = items.get('characterInventories').get('data')
         vaultInventory = items.get('profileInventory').get('data').get('items')
         items = vaultInventory + self.makeListFromCharItems(characterInventories)
@@ -293,28 +298,56 @@ class Optimise():
             logger.error('There was an error when accesing the DB (%s) using the statement: %s', e.SQL)
         return weapons
 
-        
     def getCharacters(self, membershipType, membershipId):
-        logger.debug('Getting characters')
-        response = None
+        logger.debug('Getting character ids')
         try:
             response = self._api.getProfile(membershipType, membershipId)
             characters = response.get('profile').get('data').get('characterIds')
-            logger.debug('Got characters for %s (%s)', membershipId, membershipType)
+            displayName = response.get('profile').get('data').get('userInfo').get('displayName')
+            logger.debug('Got %s character ids', characters)
+            logger.info('Got characters for %s (%s)', membershipId, membershipType)
         except APIException as e:
-            logger.error('There was an error when getting Character data: %s', e.message)
+            logger.error('There was an error when getting Character Ids: %s', e.message)
         except AttributeError as e:
             logger.error('There was an error when accesing the data recieved: %s', response)
-        return characters
+        return characters, displayName
 
+    def getCharacterData(self, membershipType, membershipId, characterIds):
+        logger.debug('Getting character data')
+        characterData = {}
+        try:
+            for character in characterIds:
+                characterData[character] = {}
+                response = self._api.getCharacter(membershipType,membershipId,character).get('character').get('data')
+                characterData[character]['emblem'] = response.get('emblemBackgroundPath')
+                characterData[character]['light'] = str(response.get('light'))
+                characterData[character]['class'], characterData[character]['gender'], characterData[character]['race'] = self.getCharacterIdentity(response.get('classHash'),response.get('genderHash'),response.get('raceHash'))
+            logger.debug('Got character data; %s', characterData)
+            return characterData
+        except APIException as e:
+            logger.error('There was an error when getting character data: %s', e.message)
+        except AttributeError as e:
+            logger.error('There was an error when accesing the data recieved: %s', response)
 
-    def getPlayerData(self, player):
+    def getCharacterIdentity(self, classHash, genderHash, raceHash):
+        classData = self.getValueFromTable(hashID(classHash), 'Class')
+        className = classData.get('displayProperties').get('name')
+        genderData = self.getValueFromTable(hashID(genderHash), 'Gender')
+        genderName = genderData.get('displayProperties').get('name')
+        raceData = self.getValueFromTable(hashID(raceHash), 'Race')
+        raceName = raceData.get('displayProperties').get('name')
+        return (className,genderName,raceName)
+            
+
+    def getPlayerData(self, player, index):
         logger.debug('Getting player data')
         try:
-            response = self._api.getPlayer(player)
+            response = self._api.getPlayer(player, index=index)
             pId = response.get('membershipId')
             pType = response.get('membershipType')
             displayName = response.get('displayName')
+
+            logger.trace('Display Name: %s, MemberId: %s, MemberType:%s', displayName, pType, pId)
 
             logger.info('Got player data for %s', player)
 
@@ -324,12 +357,15 @@ class Optimise():
         except urle.URLError as e:
             logger.error('URL error encountered! Error: %s', str(e.reason))
         except APIException as e:
-            logger.error('There was an exception when getting data from the Destiny 2 API')
+            logger.error('There was an exception when getting data from the Destiny 2 API on URL: %s', e.url)
+            raise DiscordError(e.message)
+        except DiscordError as e:
+            # TODO fix this.
+            raise DiscordError(e.message)
         except BaseException as e:
             ex_type, ex_value, ex_traceback = sys.exc_info()
             logger.error("Encounterd unknown error! Message: %s ", ex_value)
         return None
-
 
     def getValueFromTable(self, valueId, tableName):
         if 'Destiny' not in tableName:
@@ -344,9 +380,9 @@ class Optimise():
             cursor.execute(statement)
             data = cursor.fetchone()
             conn.close()
-            #Removes the tuple anmd gives the data as str
+            # Removes the tuple anmd gives the data as str
             data = data[0]
-            #Turn data str into dict for easier access
+            # Turn data str into dict for easier access
             data = json.loads(data)
             return data
         except:

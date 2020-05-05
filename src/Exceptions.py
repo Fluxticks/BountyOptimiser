@@ -1,7 +1,6 @@
-
 class APIException(OSError):
 
-    def __init__(self, message = None, url="https://Bungie.net/"):
+    def __init__(self, message=None, url="https://Bungie.net/"):
         msg = "There was an error when accessing the Destiny API"
         if message is not None:
             msg += ": " + message
@@ -17,10 +16,23 @@ class APIException(OSError):
     def message(self):
         return self._message
 
+
 class GeneralException(Exception):
 
     def __init__(self, message):
         super().__init__(message)
+
+
+class DiscordError(Exception):
+
+    def __init__(self, message):
+        super().__init__(message)
+        self._message = message
+
+    @property
+    def message(self):
+        return self._message
+
 
 class ManifestError(IOError):
 
@@ -31,7 +43,3 @@ class ManifestError(IOError):
     @property
     def SQL(self):
         return self._SQL
-    
-    
-    
-
