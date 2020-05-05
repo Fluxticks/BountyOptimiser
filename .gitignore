@@ -137,3 +137,7 @@ src/coloured_log.py
 src/automaton
 
 src/identifiers
+
+src/token.key
+
+src/levels
