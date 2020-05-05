@@ -1,7 +1,7 @@
 from util import makeLogger
 import logging
 
-logger = makeLogger('bounty', logging.INFO)
+logger = makeLogger('bounty')
 
 class Bounty():
 

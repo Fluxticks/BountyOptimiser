@@ -1,13 +1,11 @@
 from api import API
-from enums import ComponentTypeEnum, StatsEnum, ItemCategoryEnum, BucketEnum, CategoryEnum
-from util import makeColorLog, makeLogger, dprint
+from enums import BucketEnum, CategoryEnum
+from util import makeLogger, dprint
 from util import unHashToId as hashID
 from util import DEBUG_TRACE_NUM as TRACE
 import logging
 import sqlite3
 import json
-import re
-from itertools import chain
 import urllib.error as urle
 import sys
 
@@ -18,9 +16,9 @@ import ahocorasick as aho
 from time import process_time_ns
 import pickle
 
-from Exceptions import APIException, GeneralException, ManifestError, DiscordError
+from Exceptions import APIException, ManifestError, DiscordError
 
-logger = makeLogger('Optimiser', logLevel=logging.INFO)
+logger = makeLogger('Optimiser')
 
 
 class Optimise:

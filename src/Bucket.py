@@ -2,7 +2,7 @@ from util import makeLogger
 import logging
 
 
-logger = makeLogger('bucket', logLevel=logging.INFO)
+logger = makeLogger('bucket')
 
 
 class Bucket:

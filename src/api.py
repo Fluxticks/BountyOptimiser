@@ -6,7 +6,7 @@ import os.path
 import logging
 import urllib.error
 import zipfile
-from util import makeLogger, makeColorLog
+from util import makeLogger
 import glob
 from Exceptions import APIException, DiscordError
 import sys
@@ -17,7 +17,7 @@ from util import DEBUG_TRACE_NUM as TRACE
 
 BUNGIE = "https://www.bungie.net"
 BASE = BUNGIE + "/Platform/Destiny2/"
-logger = makeLogger('API', logLevel=logging.INFO)
+logger = makeLogger('API')
 
 
 # ----------------------------------------------------------------------------------------------------------------------

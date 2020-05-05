@@ -5,7 +5,7 @@ from util import makeLogger
 bot = commands.Bot(command_prefix=commands.when_mentioned_or('['), description="Supercharge your bounty farming with this bot!")
 logger = makeLogger('bot')
 
-#token = open('token.txt', 'r').read()
+discordToken = open('token.key', 'r').read()
 
 @bot.event
 async def on_ready():

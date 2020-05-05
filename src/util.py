@@ -2,6 +2,7 @@ import logging
 import colorlog
 from coloured_log import ColoredFormatter
 import discord
+import json
 
 DEBUG_TRACE_NUM = 9
 
@@ -15,7 +16,9 @@ logging.Logger.trace = trace
 logging.addLevelName(9, 'TRACE')
 
 
-def makeLogger(logName, logLevel=logging.INFO):
+def makeLogger(logName, logLevel=None):
+    if logLevel is None:
+        logLevel = stringToLevel(getLevel(logName.lower()))
     LOG_LEVEL = logLevel
     logName = logName.upper()
     length = 10 - len(logName)
@@ -45,7 +48,9 @@ def makeLogger(logName, logLevel=logging.INFO):
     return logger
 
 
-def makeColorLog(logName, logLevel=logging.INFO):
+def makeColorLog(logName, logLevel=None):
+    if logLevel is None:
+        logLevel = stringToLevel(getLevel(logName.lower()))
     LOG_LEVEL = logLevel
     LOGFORMAT = '  %(name)s : %(log_color)s%(levelname)-8s%(reset)s | %(message)s (%(filename)s:%(lineno)d)'
     stream = colorlog.StreamHandler()
@@ -62,6 +67,23 @@ def makeColorLog(logName, logLevel=logging.INFO):
     logger.addHandler(file)
 
     return logger
+
+def stringToLevel(string):
+    levels = {'trace':DEBUG_TRACE_NUM,'debug':logging.DEBUG,'info':logging.INFO,'warn':logging.WARN,'error':logging.ERROR,'critical':logging.CRITICAL}
+    if levels.get(string):
+        return levels.get(string)
+    else:
+        return logging.INFO
+
+
+def getLevel(logger):
+    with open('levels', 'r') as f:
+        data = json.load(f)
+
+    if data.get(logger):
+        return data.get(logger)
+    else:
+        return logging.INFO
 
 
 def unHashToId(hashvalue):

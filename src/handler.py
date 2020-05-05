@@ -9,7 +9,7 @@ from util import embed_message as embed
 from bs4 import BeautifulSoup
 import requests
 
-logger = makeLogger('handler', logging.INFO)
+logger = makeLogger('handler')
 
 global handler
 
