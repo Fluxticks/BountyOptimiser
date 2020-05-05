@@ -2,7 +2,6 @@ from discord.ext import commands
 import discord
 from util import makeLogger
 
-discordToken = 'NzA2ODkwNTgzNDQ0MjkxNjI0.XrG6rA.gMIioU79h9hc92hVEJ61fduFx0E'
 bot = commands.Bot(command_prefix=commands.when_mentioned_or('['), description="Supercharge your bounty farming with this bot!")
 logger = makeLogger('bot')
 
