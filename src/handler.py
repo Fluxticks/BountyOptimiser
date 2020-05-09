@@ -108,21 +108,21 @@ def makeDescription(data):
     if data.get('activity'):
         activity = 'in ' + data.get('activity')[0]
         if len(data.get('activity')) != 1:
-            for i in range(len(data.get('activity')) - 1):
+            for i in range(1, len(data.get('activity')) - 1):
                 activity += ', ' + data.get('activity')[i]
             activity += ' or ' + data.get('activity')[-1]
         description += " "+activity
     if data.get('enemy'):
         enemy = 'defeat ' + data.get('enemy')[0]
         if len(data.get('enemy')) != 1:
-            for i in range(len(data.get('enemy')) - 1):
+            for i in range(1, len(data.get('enemy')) - 1):
                 enemy += ', ' + data.get('enemy')[i]
             enemy += ' and ' + data.get('enemy')[-1]
         description += " " + enemy
     if data.get('ability'):
         ability = '. Use ' + data.get('ability')[0]
         if len(data.get('ability')) != 1:
-            for i in range(len(data.get('ability')) - 1):
+            for i in range(1, len(data.get('ability')) - 1):
                 ability += ', ' + data.get('ability')[i]
             ability += ' or ' + data.get('ability')[-1]
         description += ability
@@ -249,5 +249,5 @@ class Handler(commands.Cog):
             ex_type, ex_value, ex_traceback = sys.exc_info()
             logger.error('(%s) %s', ex_type, ex_value)
             await ctx.send(embed=embed('Error!',
-                                       description='There was an internal error while processing your request. Please report this bug here: https://github.com/Fluxticks/BountyOptimiser/issues making sure to include your discord handle, the command you tried to run and the error message\nError Message: '+ex_value,
+                                       description='There was an internal error while processing your request. Please report this bug here: https://github.com/Fluxticks/BountyOptimiser/issues making sure to include your discord handle, the command you tried to run and the error message\n\nError Message: '+ str(ex_value),
                                        colour='red'))

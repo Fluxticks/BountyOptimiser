@@ -17,12 +17,12 @@ async def on_ready():
     logger.info(f'\t guilds: {len(bot.guilds)}')
 
 @bot.command()
-@commands.has_permissions(administrator=True)
 async def reload(ctx):
     a = ctx.message.author
     if a.id == 244050529271939073:
-        logger.warn('Reloading bot. You will need to restart, this is temporary')
-        await ctx.send('Hello Fluxticks :) Remember to restart soon')
+        me = [x.name for x in ctx.guild.members if x.id == 244050529271939073]
+        logger.warning('Reloading bot. You will need to restart, this is temporary')
+        await ctx.send(f'Hello {me[0]} :) Remember to restart soon')
         bot.reload_extension('handler')
         logger.info('Done Reloading')
 
